@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+	.gmap {
+		width: 100%;
+		height: 100vh;
+	}
+
+	#map {
+	width: 500px;
+	height: 500px;
+	}
+	        
+	.SvgOverlay {
+		position: relative;
+		width: 500px;
+		height: 500px;           
+	}
+
+	.SvgOverlay svg {
+		position: absolute;
+		top: -4000px;
+		left: -4000px;
+		width: 8000px;
+		height: 8000px;        
+	}
+
+	.SvgOverlay path {
+		stroke: #fff;
+		stroke-width: 2px;
+		fill-opacity: .6;
+	}
+</style>
+<body>
+<div class="gmap"></div>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyALTpTCEl9u4F9JSy35aN0uUikFSyNtyBA" type="text/javascript"></script>
+<script src="https://d3js.org/topojson.v1.min.js"></script>
+<script>
+	d3.json("us.json", function(error, us) {
+		var map = new google.maps.Map(d3.select(".gmap").node(), {
+			zoom: 4,
+			center: new google.maps.LatLng(38.334080, -95.532394),
+			mapTypeId: google.maps.MapTypeId.ROADMAP
+		});
+		
+		var topoJson = topojson.feature(us, us.objects.states);
+		var overlay = new google.maps.OverlayView();
+		overlay.onAdd = function () {
+			var layer = d3.select(this.getPanes().overlayLayer).append("div").attr("class", "SvgOverlay");
+			var svg = layer.append("svg");
+			var adminDivisions = svg.append("g").attr("class", "AdminDivisions");
+
+			overlay.draw = function () {
+				var markerOverlay = this;
+				var overlayProjection = markerOverlay.getProjection();
+
+				var googleMapProjection = function (coordinates) {
+					var googleCoordinates = new google.maps.LatLng(coordinates[1], coordinates[0]);
+					var pixelCoordinates = overlayProjection.fromLatLngToDivPixel(googleCoordinates);
+					return [pixelCoordinates.x + 4000, pixelCoordinates.y + 4000];
+				}
+
+				var arrayColor  = d3.scale.category10().range(["#ff0000","#f7941d","#fdd600","#6eb400","#317741","#8494a0"]);
+
+				path = d3.geo.path().projection(googleMapProjection);
+				adminDivisions.selectAll("path")
+					.data(topoJson.features)
+					.attr("d", path)
+					.enter().append("svg:path")
+					.attr("d", path)
+					.style("fill", function(d, i) {
+						return arrayColor(i)
+					});
+			};
+		};
+		overlay.setMap(map);
+	});
+</script>
